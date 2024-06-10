@@ -28,18 +28,12 @@ export class LiquidatePositionsHandler extends Handler {
 
   private _handle(quoteId: BigInt): void {
     if (this.user == zero_address) return
-    const volumeInDollars = this.getVolume(quoteId)
+    const volumeInDollars = this.getVolume(quoteId, this.week)
     updateVolume(this.user, this.day, this.week, volumeInDollars, this.timestamp) // user volume tracker
-    updateVolume(
-      Address.fromBytes(zero_address),
-      this.day,
-      this.week,
-      volumeInDollars,
-      this.timestamp,
-    ) // total volume tracker
+    updateVolume(Address.fromBytes(zero_address), this.day, this.week, volumeInDollars, this.timestamp) // total volume tracker
   }
 
-  public getVolume(quoteId: BigInt): BigInt {
+  public getVolume(quoteId: BigInt, week: BigInt): BigInt {
     const quote = Quote.load(this.getQuoteObjectId(quoteId))
 
     if (quote == null) return BigInt.zero() //FIXME
@@ -51,12 +45,18 @@ export class LiquidatePositionsHandler extends Handler {
     let chainQuote = callResult.value
     const liquidAmount = quote.quantity.minus(quote.closedAmount)
     const liquidPrice = chainQuote.avgClosedPrice
-      .times(quote.quantity)
-      .minus(quote.avgClosedPrice.times(quote.closedAmount))
-      .div(liquidAmount)
-    return liquidAmount
-      .times(liquidPrice)
-      .times(BigInt.fromI32(4))
-      .div(BigInt.fromString("10").pow(18))
+        .times(quote.quantity)
+        .minus(quote.avgClosedPrice.times(quote.closedAmount))
+        .div(liquidAmount)
+    if (week.le(BigInt.fromI32(1))) { // this maintains backwards compatibility on incorrectly counted epochs
+      return liquidAmount
+          .times(liquidPrice)
+          .times(BigInt.fromI32(4))
+          .div(BigInt.fromString("10").pow(18))
+    } else {
+      return liquidAmount
+          .times(liquidPrice)
+          .div(BigInt.fromString("10").pow(18))
+    }
   }
 }
