@@ -1,5 +1,5 @@
 {
-    "name": "gmx-subgraph",
+    "name": "gmx-subgraph-test",
     "license": "UNLICENSED",
     "dependencies": {
       "@graphprotocol/graph-cli": "0.21.1",
