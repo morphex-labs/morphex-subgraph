@@ -68,7 +68,7 @@ dataSources:
       file: ./src/ordersMapping.ts
 
   - kind: ethereum/contract
-    name: OrderBook
+    name: OrderBookNew
     network: sonic
     source:
       address: "0x55F1234662bb538231d56636bb182915B43d4364"

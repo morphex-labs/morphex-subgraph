@@ -299,7 +299,7 @@ dataSources:
       file: ./src/ordersMapping.ts
 
   - kind: ethereum/contract
-    name: OrderBook
+    name: OrderBookNew
     network: base
     source:
       address: "0xb8372b8c8FbB4E72938D9e1cDD66b135e43faA2A"
