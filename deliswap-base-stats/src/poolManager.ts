@@ -27,10 +27,12 @@ function getPoolType(hookAddress: Address): string {
 
 // Helper function to calculate and update V4 position reserves (User TVL)
 function updateV4PositionReserves(position: Position, pool: Pool): void {
+    // **FIX:** Simplified null checks to avoid compiler assertion failure.
     // Safeguards, although V4 pools should always have price/ticks if initialized.
-    if (pool.sqrtPrice == null || pool.tick == null || position.tickLower == null || position.tickUpper == null) {
-        return
-    }
+    if (pool.sqrtPrice == null) return
+    if (pool.tick == null) return
+    if (position.tickLower == null) return
+    if (position.tickUpper == null) return
 
     // If liquidity is zero (or negative due to BigInt representation), reserves must be zero.
     if (position.liquidity.le(ZERO_BI)) {
@@ -82,7 +84,7 @@ function updateV4PositionReserves(position: Position, pool: Pool): void {
     position.save()
 }
 
-// Helper function to calculate V4 action amounts (MINT/BURN) (TODO addressed)
+// Helper function to calculate V4 action amounts (MINT/BURN)
 function calculateV4ActionAmounts(pool: Pool, tickLower: i32, tickUpper: i32, liquidityDelta: BigInt): BigInt[] {
     if (pool.sqrtPrice == null || pool.tick == null) {
         // Should have been fetched/validated before calling this.
@@ -206,12 +208,12 @@ export function handleModifyLiquidity(event: ModifyLiquidity): void {
     let user: User
     let position: Position | null
 
-    // Calculate V4 MINT/BURN amounts (amount0/amount1) using V4 math. (TODO addressed)
+    // Calculate V4 MINT/BURN amounts (amount0/amount1) using V4 math.
     let amounts = calculateV4ActionAmounts(pool, tickLower, tickUpper, liquidityDelta)
     let amount0 = amounts[0]
     let amount1 = amounts[1]
 
-    // Determine position type and owner (TODO addressed: NFT vs Non-NFT tracking)
+    // Determine position type and owner
     if (senderAddress.equals(V4_POSITION_MANAGER_ADDRESS)) {
         // Case 1: NFT Position (managed via PositionManager)
         let tokenId = salt.toBigInt() // TokenId is used as salt
@@ -255,7 +257,7 @@ export function handleModifyLiquidity(event: ModifyLiquidity): void {
 
 
     } else {
-        // Case 2: Non-NFT Position (Direct PoolManager interaction) (TODO addressed)
+        // Case 2: Non-NFT Position (Direct PoolManager interaction)
         user = loadOrCreateUser(senderAddress)
 
         // Use a unique key for the position identifier (owner-tickLower-tickUpper-salt)
@@ -280,7 +282,7 @@ export function handleModifyLiquidity(event: ModifyLiquidity): void {
     position.liquidity = position.liquidity.plus(liquidityDelta)
 
 
-    // Update V4 position reserves (User TVL: reserve0/reserve1). (TODO addressed)
+    // Update V4 position reserves (User TVL: reserve0/reserve1).
     updateV4PositionReserves(position, pool)
     // position.save() is called within updateV4PositionReserves.
 
@@ -383,7 +385,7 @@ export function handleSwap(event: Swap): void {
 
         pool.save()
 
-        // Since the price changed, we must update reserves for all V4 positions in this pool. (TODO addressed)
+        // Since the price changed, we must update reserves for all V4 positions in this pool.
         // Note: This is computationally expensive but required for accurate User TVL tracking.
         let positions = pool.positions.load()
         for (let i = 0; i < positions.length; i++) {
