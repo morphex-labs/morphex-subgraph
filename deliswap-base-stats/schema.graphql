@@ -1,4 +1,4 @@
-type Token @entity {
+type Token @entity(immutable: true) {
     id: ID!
     symbol: String!
     name: String!
@@ -11,7 +11,7 @@ enum PoolType {
     V4
 }
 
-type Pool @entity {
+type Pool @entity(immutable: false) {
     id: ID!
     type: PoolType!
     hookAddress: Bytes!
@@ -37,13 +37,13 @@ type Pool @entity {
     positions: [Position!]! @derivedFrom(field: "pool")
 }
 
-type User @entity {
+type User @entity(immutable: true) {
     id: ID!
     positions: [Position!]! @derivedFrom(field: "user")
     actions: [Action!]! @derivedFrom(field: "user")
 }
 
-type Position @entity {
+type Position @entity(immutable: false) {
     id: ID!
     pool: Pool!
     user: User!
@@ -69,7 +69,7 @@ enum ActionType {
     BURN
 }
 
-type Action @entity {
+type Action @entity(immutable: true) {
     id: ID!
     type: ActionType!
     timestamp: BigInt!
@@ -92,7 +92,7 @@ type Action @entity {
     isBuyToken1: Boolean
 }
 
-type TVLSnapshot @entity {
+type TVLSnapshot @entity(immutable: true) {
     id: ID!
     pool: Pool!
     timestamp: BigInt!
