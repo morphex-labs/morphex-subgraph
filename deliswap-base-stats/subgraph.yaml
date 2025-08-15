@@ -60,7 +60,6 @@ dataSources:
       file: ./src/positionManager.ts
       # TODO: To accurately track V4 MINT/BURN amounts (amount0/amount1), which are missing from PoolManager.ModifyLiquidity,
       # one would need to decode the transaction input data of calls made to the PositionManager (e.g. mint, increaseLiquidity, decreaseLiquidity).
-      # This is complex and currently omitted, resulting in placeholder amounts for V4 MINT/BURN actions.
 
   - kind: ethereum
     name: DeliHookConstantProduct

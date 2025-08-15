@@ -114,7 +114,6 @@ export function handleModifyLiquidity(event: ModifyLiquidity): void {
 
         // TODO: Update V4 position reserves (User TVL: reserve0/reserve1).
         // This requires complex calculations based on the current price, ticks, and liquidity.
-        // V4 User TVL tracking is deferred due to complexity.
 
         position.save()
 
@@ -137,7 +136,7 @@ export function handleModifyLiquidity(event: ModifyLiquidity): void {
     action.pool = pool.id
     action.user = user.id
 
-    // TODO: Investigate decoding transaction input from PositionManager calls, V4 amounts are critical.
+    // TODO: Decode transaction input from PositionManager calls, V4 amounts are critical.
     action.amount0 = ZERO_BI
     action.amount1 = ZERO_BI
 
