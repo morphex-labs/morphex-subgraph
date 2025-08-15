@@ -4,17 +4,17 @@ schema:
   file: ./schema.graphql
 dataSources:
   # 1. PoolManager (Uniswap V4 Core)
-  # Tracks pool creation (Initialize) for both V2 and V4, and actions (Swap, ModifyLiquidity).
+  # Tracks pool creation (Initialize), actions (Swap), and V4 liquidity changes (ModifyLiquidity).
   # Mappings filter events to only include DeliSwap pools based on the hook address.
   - kind: ethereum
     name: PoolManager
     network: base # ChainID 8453
     source:
-      # CRITICAL TODO: Replace with the actual PoolManager address on Base.
-      # This address can be found by calling the POOL_MANAGER() function on the DailyEpochGauge (0xE578Cc6D1baF15E43b18fdF8447EFA13D39F2261).
-      address: "0x0000000000000000000000000000000000000000"
+      # PoolManager address on Base (from reference contracts)
+      address: "0x498581fF718922c3f8e6A244956aF099B2652b2b"
       abi: PoolManager
-      startBlock: 33808500
+      # Start block updated based on the deployment block of the PoolManager in reference contracts
+      startBlock: 25350988
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -23,27 +23,65 @@ dataSources:
         - Pool
         - Action
         - Token
+        - TVLSnapshot
+        - Position
+        - User
       abis:
         # ABIs must be provided in the ./abis directory
         - name: PoolManager
           file: ./abis/PoolManager.json
         - name: ERC20
           file: ./abis/ERC20.json
+        # Added PositionManager ABI for contract calls (ownerOf) required in handleModifyLiquidity
+        - name: PositionManager
+          file: ./abis/PositionManager.json
       eventHandlers:
         # Pool Creation
-        # NOTE: The Initialize event signature might vary slightly depending on the exact PoolManager version deployed.
-        # Assuming standard V4 signature including sqrtPriceX96 and tick.
+        # Using the signature from the provided PoolManager.sol reference.
         - event: Initialize(bytes32 indexed id, address indexed currency0, address indexed currency1, uint24 fee, int24 tickSpacing, address hooks, uint160 sqrtPriceX96, int24 tick)
           handler: handleInitialize
         # V4 Liquidity Changes (Mints/Burns)
+        # Used to track V4 positions and create MINT/BURN actions by identifying the user.
+        # NOTE: Does not contain amount0/amount1.
         - event: ModifyLiquidity(bytes32 indexed id, address indexed sender, int24 tickLower, int24 tickUpper, int128 liquidityDelta, bytes32 salt)
           handler: handleModifyLiquidity
         # Swaps (V2 and V4)
+        # Used to track SWAP actions and update V4 TVL.
         - event: Swap(bytes32 indexed id, address indexed sender, int128 amount0, int128 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick, uint24 fee)
           handler: handleSwap
       file: ./src/poolManager.ts
 
-  # 2. DeliHookConstantProduct (V2 Hook)
+  # 2. PositionManager (Uniswap V4 Periphery)
+  # Tracks V4 NFT ownership changes (User TVL).
+  - kind: ethereum
+    name: PositionManager
+    network: base
+    source:
+      # PositionManager address on Base (from reference contracts)
+      address: "0x7C5f5A4bBd8fD63184577525326123B519429bDc"
+      abi: PositionManager
+      # Start block updated based on the deployment block of the PositionManager in reference contracts
+      startBlock: 25350993
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Position
+        - User
+      abis:
+        - name: PositionManager
+          file: ./abis/PositionManager.json
+      eventHandlers:
+        # Track NFT ownership changes (Transfers)
+        - event: Transfer(indexed address from, indexed address to, indexed uint256 tokenId)
+          handler: handleTransfer
+      file: ./src/positionManager.ts
+      # TODO: To accurately track V4 MINT/BURN amounts (amount0/amount1), which are missing from PoolManager.ModifyLiquidity,
+      # one would need to decode the transaction input data of calls made to the PositionManager (e.g. mint, increaseLiquidity, decreaseLiquidity).
+      # This is complex and currently omitted, resulting in placeholder amounts for V4 MINT/BURN actions.
+
+  # 3. DeliHookConstantProduct (V2 Hook)
   # Tracks V2 specific events needed for accurate TVL and action details (amounts).
   - kind: ethereum
     name: DeliHookConstantProduct
@@ -60,6 +98,7 @@ dataSources:
         - Pool
         - TVLSnapshot
         - Action
+        - Position
       abis:
         - name: DeliHookConstantProduct
           file: ./abis/DeliHookConstantProduct.json
@@ -75,7 +114,7 @@ dataSources:
           handler: handleV2Burn
       file: ./src/v2hook.ts
 
-  # 3. V2PositionHandler
+  # 4. V2PositionHandler
   # Tracks V2 User Positions (Stakings/TVL per user) using synthetic TokenIds.
   - kind: ethereum
     name: V2PositionHandler
@@ -103,8 +142,3 @@ dataSources:
         - event: V2PositionRemoved(bytes32 indexed poolId, address indexed owner, uint256 tokenId)
           handler: handleV2PositionRemoved
       file: ./src/v2positionHandler.ts
-
-# V4 Position Tracking Note:
-# Tracking V4 user positions (liquidity per user/NFT) requires adding the Uniswap V4 PositionManager datasource.
-# This is necessary for accurate V4 User TVL tracking.
-# TODO: Add PositionManager datasource once the address is known.

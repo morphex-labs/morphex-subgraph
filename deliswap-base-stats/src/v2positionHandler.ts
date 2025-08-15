@@ -3,9 +3,9 @@ import {
     V2PositionModified,
     V2PositionRemoved
 } from "../generated/V2PositionHandler/V2PositionHandler"
-import { Pool, Position, User } from "../generated/schema"
-import { ZERO_BI, ZERO_BD } from "./constants"
-import { Address, BigInt, log } from "@graphprotocol/graph-ts"
+import { Pool, Position } from "../generated/schema"
+import { ZERO_BI } from "./constants"
+import { log } from "@graphprotocol/graph-ts"
 import { loadOrCreateUser } from "./helpers"
 // Import the update function from v2hook.ts to synchronize User TVL
 import { updateV2PositionReserves } from "./v2hook"
@@ -33,7 +33,7 @@ export function handleV2PositionCreated(event: V2PositionCreated): void {
     position.liquidity = ZERO_BI
     position.reserve0 = ZERO_BI
     position.reserve1 = ZERO_BI
-    position.valueUSD = ZERO_BD
+    // Removed USD value
 
     // V2 positions are full range, tickLower/tickUpper remain null.
 

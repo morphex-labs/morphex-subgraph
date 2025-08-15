@@ -1,6 +1,6 @@
 import { Address, BigInt, Bytes, dataSource, ethereum, BigDecimal } from "@graphprotocol/graph-ts"
 import { ERC20 } from "../generated/PoolManager/ERC20"
-import { Token, User } from "../generated/schema"
+import { Token, User, Pool, TVLSnapshot } from "../generated/schema"
 import { ZERO_BI, ZERO_BD } from "./constants"
 
 // Helper functions to safely fetch token details
@@ -32,7 +32,7 @@ export function fetchTokenDecimals(tokenAddress: Address): BigInt {
     if (decimalResult.value.toU64() > 255) {
         return BigInt.fromI32(18)
     }
-    return BigInt.fromI32(decimalResult.value as i32)
+    return BigInt.fromI32(decimalResult.value.toI32())
 }
 
 export function fetchTokenTotalSupply(tokenAddress: Address): BigInt {
@@ -53,7 +53,7 @@ export function loadOrCreateToken(tokenAddress: Address): Token {
         token.name = fetchTokenName(tokenAddress)
         token.decimals = fetchTokenDecimals(tokenAddress).toI32()
         token.totalSupply = fetchTokenTotalSupply(tokenAddress)
-        token.totalValueLockedUSD = ZERO_BD
+        // Removed USD TVL initialization
         token.save()
     }
     return token
@@ -69,16 +69,25 @@ export function loadOrCreateUser(userAddress: Address): User {
     return user
 }
 
+// --- TVL Snapshot Helper ---
+
+// Creates a historical TVL snapshot for a pool
+export function createTVLSnapshot(pool: Pool, event: ethereum.Event): void {
+    let snapshotId = pool.id + "-" + event.block.timestamp.toString()
+    let snapshot = TVLSnapshot.load(snapshotId)
+    // Avoid duplicate snapshots in the same timestamp (e.g., multiple events in one block)
+    if (snapshot == null) {
+        snapshot = new TVLSnapshot(snapshotId)
+        snapshot.pool = pool.id
+        snapshot.timestamp = event.block.timestamp
+        snapshot.blockNumber = event.block.number
+        snapshot.liquidity = pool.liquidity
+        snapshot.reserve0 = pool.reserve0
+        snapshot.reserve1 = pool.reserve1
+        // Removed USD TVL
+        snapshot.save()
+    }
+}
+
 // --- Pricing and TVL Calculation ---
-
-// TODO: Implement robust pricing logic.
-export function getPriceUSD(token: Token): BigDecimal {
-    // Placeholder implementation.
-    return ZERO_BD
-}
-
-// Calculate the USD value of two token amounts
-export function calculateAmountUSD(token0: Token, amount0: BigInt, token1: Token, amount1: BigInt): BigDecimal {
-    // TODO: Replace placeholder implementation once getPriceUSD is implemented.
-    return ZERO_BD
-}
+// Removed as per requirements. Subgraph outputs raw token amounts.
