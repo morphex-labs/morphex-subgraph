@@ -1,0 +1,112 @@
+type Token @entity {
+    id: ID! # Address
+    symbol: String!
+    name: String!
+    decimals: Int!
+    totalSupply: BigInt!
+    # Aggregated data
+    totalValueLockedUSD: BigDecimal!
+}
+
+enum PoolType {
+    V2
+    V4
+}
+
+type Pool @entity {
+    id: ID! # PoolId (bytes32)
+    type: PoolType!
+    hookAddress: Bytes!
+    token0: Token!
+    token1: Token!
+    fee: Int!
+    tickSpacing: Int!
+    createdAtTimestamp: BigInt!
+    createdAtBlockNumber: BigInt!
+
+    # Liquidity and reserves
+    # V2: liquidity = Total LP supply. reserve0/1 = Pool reserves.
+    # V4: liquidity = Active liquidity. reserve0/1 = Total locked tokens (TODO: Requires implementation for V4).
+    liquidity: BigInt!
+    reserve0: BigInt!
+    reserve1: BigInt!
+
+    # Price tracking (V4 specific, might be null for V2)
+    sqrtPrice: BigInt
+    tick: Int
+
+    # TVL
+    totalValueLockedUSD: BigDecimal!
+
+    # Relations
+    actions: [Action!]! @derivedFrom(field: "pool")
+    snapshots: [TVLSnapshot!]! @derivedFrom(field: "pool")
+    positions: [Position!]! @derivedFrom(field: "pool")
+}
+
+type User @entity {
+    id: ID! # Address
+    positions: [Position!]! @derivedFrom(field: "user")
+    actions: [Action!]! @derivedFrom(field: "user")
+}
+
+# Represents a user's stake in a pool (V2 share or V4 position)
+type Position @entity {
+    id: ID! # V2: Synthetic TokenId. V4: NFT TokenId (TODO: V4 not yet implemented).
+    pool: Pool!
+    user: User!
+    liquidity: BigInt! # Amount of liquidity/shares owned by the user
+
+    # Underlying assets (Calculated based on liquidity share) - User TVL
+    reserve0: BigInt!
+    reserve1: BigInt!
+    valueUSD: BigDecimal!
+
+    # V4 specific fields (if applicable)
+    tickLower: Int
+    tickUpper: Int
+    tokenId: BigInt # Synthetic (V2) or NFT (V4) TokenId
+}
+
+enum ActionType {
+    SWAP
+    MINT
+    BURN
+}
+
+# Unified entity for all actions, queryable by pool, user, and token (for swaps)
+type Action @entity {
+    id: ID! # Transaction hash + log index
+    type: ActionType!
+    timestamp: BigInt!
+    blockNumber: BigInt!
+    transactionHash: Bytes!
+    pool: Pool!
+    user: User! # The user who initiated the action
+
+    # Deltas for the pool reserves (MINT: positive, BURN/SWAP: mixed)
+    amount0: BigInt!
+    amount1: BigInt!
+    amountUSD: BigDecimal!
+
+    # Fields specific to SWAP
+    tokenIn: Token
+    tokenOut: Token
+    amountIn: BigInt
+    amountOut: BigInt
+    # Helper fields to indicate buy/sell for a specific token
+    isBuyToken0: Boolean # True if token0 was bought (received by user)
+    isBuyToken1: Boolean # True if token1 was bought
+}
+
+# Historical TVL data snapshot at the time of an action
+type TVLSnapshot @entity {
+    id: ID! # PoolId + timestamp
+    pool: Pool!
+    timestamp: BigInt!
+    blockNumber: BigInt!
+    liquidity: BigInt!
+    reserve0: BigInt!
+    reserve1: BigInt!
+    totalValueLockedUSD: BigDecimal!
+}

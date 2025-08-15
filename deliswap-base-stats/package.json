@@ -1,0 +1,14 @@
+{
+  "name": "deliswap-base-stats",
+  "license": "UNLICENSED",
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build"
+  },
+  "dependencies": {
+    "@graphprotocol/graph-cli": "^0.97.1",
+    "@graphprotocol/graph-ts": "^0.38.1",
+    "ethers": "^5.4.6",
+    "moment": "^2.29.1"
+  }
+}
