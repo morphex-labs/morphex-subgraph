@@ -3,7 +3,6 @@ import { ERC20 } from "../generated/PoolManager/ERC20"
 import { Token, User, Pool, TVLSnapshot } from "../generated/schema"
 import { ZERO_BI, ZERO_BD } from "./constants"
 
-// Helper functions to safely fetch token details
 export function fetchTokenSymbol(tokenAddress: Address): string {
     let contract = ERC20.bind(tokenAddress)
     let symbolResult = contract.try_symbol()
@@ -28,7 +27,6 @@ export function fetchTokenDecimals(tokenAddress: Address): BigInt {
     if (decimalResult.reverted) {
         return BigInt.fromI32(18)
     }
-    // Ensure the result fits in i32 as required by schema
     if (decimalResult.value.toU64() > 255) {
         return BigInt.fromI32(18)
     }
@@ -44,7 +42,6 @@ export function fetchTokenTotalSupply(tokenAddress: Address): BigInt {
     return totalSupplyResult.value
 }
 
-// Load or create Token entity
 export function loadOrCreateToken(tokenAddress: Address): Token {
     let token = Token.load(tokenAddress.toHexString())
     if (token == null) {
@@ -53,13 +50,11 @@ export function loadOrCreateToken(tokenAddress: Address): Token {
         token.name = fetchTokenName(tokenAddress)
         token.decimals = fetchTokenDecimals(tokenAddress).toI32()
         token.totalSupply = fetchTokenTotalSupply(tokenAddress)
-        // Removed USD TVL initialization
         token.save()
     }
     return token
 }
 
-// Load or create User entity
 export function loadOrCreateUser(userAddress: Address): User {
     let user = User.load(userAddress.toHexString())
     if (user == null) {
@@ -69,13 +64,9 @@ export function loadOrCreateUser(userAddress: Address): User {
     return user
 }
 
-// --- TVL Snapshot Helper ---
-
-// Creates a historical TVL snapshot for a pool
 export function createTVLSnapshot(pool: Pool, event: ethereum.Event): void {
     let snapshotId = pool.id + "-" + event.block.timestamp.toString()
     let snapshot = TVLSnapshot.load(snapshotId)
-    // Avoid duplicate snapshots in the same timestamp (e.g., multiple events in one block)
     if (snapshot == null) {
         snapshot = new TVLSnapshot(snapshotId)
         snapshot.pool = pool.id
@@ -84,10 +75,6 @@ export function createTVLSnapshot(pool: Pool, event: ethereum.Event): void {
         snapshot.liquidity = pool.liquidity
         snapshot.reserve0 = pool.reserve0
         snapshot.reserve1 = pool.reserve1
-        // Removed USD TVL
         snapshot.save()
     }
 }
-
-// --- Pricing and TVL Calculation ---
-// Removed as per requirements. Subgraph outputs raw token amounts.
