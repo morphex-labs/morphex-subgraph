@@ -22,10 +22,13 @@ type Pool @entity {
     createdAtTimestamp: BigInt!
     createdAtBlockNumber: BigInt!
 
+    # V2: Total liquidity shares. V4: Active liquidity at current tick.
     liquidity: BigInt!
+    # Total reserves (TVL)
     reserve0: BigInt!
     reserve1: BigInt!
 
+    # V4 price/tick state
     sqrtPrice: BigInt
     tick: Int
 
@@ -46,13 +49,18 @@ type Position @entity {
     user: User!
     liquidity: BigInt!
 
-    # V4: TODO: Calculating exact underlying reserves for V4 requires complex math based on ticks and current price.
+    # Underlying reserves (User TVL).
+    # V4: Calculated using concentrated liquidity math based on current price, ticks, and liquidity.
+    # V2: Calculated based on pro-rata share of pool reserves.
     reserve0: BigInt!
     reserve1: BigInt!
 
+    # V4 range parameters
     tickLower: Int
     tickUpper: Int
-    tokenId: BigInt!
+
+    # NFT Token ID (V2/V4). Null for V4 non-NFT positions (direct PoolManager interaction).
+    tokenId: BigInt
 }
 
 enum ActionType {
@@ -70,9 +78,12 @@ type Action @entity {
     pool: Pool!
     user: User!
 
+    # For MINT/BURN: Absolute amount0/amount1 involved in the liquidity change.
+    # For SWAP: signed amount0/amount1 delta for the pool.
     amount0: BigInt!
     amount1: BigInt!
 
+    # SWAP specific fields
     tokenIn: Token
     tokenOut: Token
     amountIn: BigInt
